@@ -29,7 +29,12 @@ class TextNode():
         return self.text == other.text and self.text_type == other.text_type and self.url == other.url
 
     def __repr__(self) -> str:
-        return f"TextNode({self.text}, {self.text_type}, {self.url})"
+        if self.url:
+            url = f"\"{self.url}\""
+        else:
+            url = self.url
+
+        return f"TextNode(\"{self.text}\", {self.text_type}, {url})"
 
 
 def text_node_to_html_node(text_node):
@@ -49,7 +54,6 @@ def text_node_to_html_node(text_node):
         case _:
             raise ValueError("Unknown type")
 
-# TODO: Nested inline nodes are not supported which is something we can expect in markdown text
 def split_nodes_delimiter(old_nodes: list[TextNode], delimiter, text_type):
     def accumulate_nodes(acc: list, node):
         if node.text_type == TextType.TEXT:
@@ -59,7 +63,7 @@ def split_nodes_delimiter(old_nodes: list[TextNode], delimiter, text_type):
             balanced = candidate_node_count % 2 != 0
 
             if balanced and candidate_node_count == 1:
-                acc.extend(old_nodes)
+                acc.append(node)
             elif balanced:
                 for node_index in range(0, len(candidate_nodes)):
                     node_text = candidate_nodes[node_index]
@@ -124,9 +128,18 @@ def split_nodes_with_source(old_nodes):
                     new_nodes.append(new_node)
 
                     node_parts = []
-
-            return new_nodes
         else:
             new_nodes.append(node)
 
-    pass
+    return new_nodes
+
+
+def text_to_textnodes(text):
+    initial_text_node = TextNode(text, TextType.TEXT)
+
+    split = split_nodes_with_source([initial_text_node])
+    split = split_nodes_delimiter(split, "**", TextType.BOLD)
+    split = split_nodes_delimiter(split, "*", TextType.ITALIC)
+    split = split_nodes_delimiter(split, "`", TextType.CODE)
+
+    return split

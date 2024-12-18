@@ -7,6 +7,7 @@ from textnode import (
     split_nodes_delimiter,
     split_nodes_with_source,
     text_node_to_html_node,
+    text_to_textnodes,
 )
 
 class TestTextNode(unittest.TestCase):
@@ -49,26 +50,13 @@ class TestTextNode(unittest.TestCase):
     def test_repr(self):
         node = TextNode("This is a text node", TextType.BOLD)
 
-        self.assertEqual(repr(node), "TextNode(This is a text node, TextType.BOLD, None)")
+        self.assertEqual(repr(node), "TextNode(\"This is a text node\", TextType.BOLD, None)")
+
+        node = TextNode("This is a text node", TextType.BOLD, "https://google.com")
+
+        self.assertEqual(repr(node), "TextNode(\"This is a text node\", TextType.BOLD, \"https://google.com\")")
 
 
-
-# def text_node_to_html_node(text_node):
-#     match text_node.type:
-#         case TextType.NORMAL:
-#             return LeafNode(None, text_node.text)
-#         case TextType.BOLD:
-#             return LeafNode("b", text_node.text)
-#         case TextType.ITALIC:
-#             return LeafNode("i", text_node.text)
-#         case TextType.CODE:
-#             return LeafNode("code", text_node.text)
-#         case TextType.LINK:
-#             return LeafNode("a", text_node.text, { "href": text_node.url })
-#         case TextType.IMAGE:
-#             return LeafNode("img", "", { "src": text_node.url, "alt": text_node.text })
-#         case _:
-#             raise ValueError("Unknown type")
 
 class TestTextNodeToHtmlNode(unittest.TestCase):
     text_to_html_node_cases = [
@@ -169,6 +157,24 @@ class TestSplitNodesDelimiter(unittest.TestCase):
                 TextNode(" text", TextType.TEXT),
             ],
         ),
+        (
+            [
+                TextNode("This is **text** with an *italic* word and a `code block` and an ", TextType.TEXT, None),
+                TextNode("obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+                TextNode(" and a ", TextType.TEXT, None),
+                TextNode("link", TextType.LINK, "https://boot.dev"),
+            ],
+            "**",
+            TextType.BOLD,
+            [
+                TextNode("This is ", TextType.TEXT, None),
+                TextNode("text", TextType.BOLD, None),
+                TextNode(" with an *italic* word and a `code block` and an ", TextType.TEXT, None),
+                TextNode("obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+                TextNode(" and a ", TextType.TEXT, None),
+                TextNode("link", TextType.LINK, "https://boot.dev"),
+            ],
+        )
     ]
 
     def test_split_nodes_delimiter(self):
@@ -180,7 +186,7 @@ class TestSplitNodesDelimiter(unittest.TestCase):
 
             self.assertEqual(result, expected_nodes)
 
-class TestSplitNodesWithSourceDelimiter(unittest.TestCase):
+class TestSplitNodesWithSource(unittest.TestCase):
     split_nodes_with_source_cases = [
         (
             [
@@ -188,8 +194,30 @@ class TestSplitNodesWithSourceDelimiter(unittest.TestCase):
                     "A [link](https://foo.bar) can be a nice place to have ![pandas](/assets/panda.png)",
                     TextType.TEXT
                 ),
+                TextNode(
+                    "A [link](https://foo.bar) can be a nice place to have ![pandas](/assets/panda.png)",
+                    TextType.TEXT
+                ),
             ],
             [
+                TextNode(
+                    "A ",
+                    TextType.TEXT
+                ),
+                TextNode(
+                    "link",
+                    TextType.LINK,
+                    "https://foo.bar"
+                ),
+                TextNode(
+                    " can be a nice place to have ",
+                    TextType.TEXT,
+                ),
+                TextNode(
+                    "pandas",
+                    TextType.IMAGE,
+                    "/assets/panda.png"
+                ),
                 TextNode(
                     "A ",
                     TextType.TEXT
@@ -216,8 +244,16 @@ class TestSplitNodesWithSourceDelimiter(unittest.TestCase):
                     "Some random text with no *links* or images",
                     TextType.TEXT
                 ),
+                TextNode(
+                    "Some random text with no *links* or images",
+                    TextType.TEXT
+                ),
             ],
             [
+                TextNode(
+                    "Some random text with no *links* or images",
+                    TextType.TEXT
+                ),
                 TextNode(
                     "Some random text with no *links* or images",
                     TextType.TEXT
@@ -230,6 +266,38 @@ class TestSplitNodesWithSourceDelimiter(unittest.TestCase):
         for text_nodes, expected_nodes in self.split_nodes_with_source_cases:
             try:
                 result = split_nodes_with_source(text_nodes)
+            except ValueError as e:
+                result = repr(e)
+
+            self.assertEqual(result, expected_nodes)
+
+class TestTextToTextNodes(unittest.TestCase):
+    text_to_textnodes_cases = [
+        (
+            "This is **text** with an *italic* word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)",
+            [
+                TextNode("This is ", TextType.TEXT),
+                TextNode("text", TextType.BOLD),
+                TextNode(" with an ", TextType.TEXT),
+                TextNode("italic", TextType.ITALIC),
+                TextNode(" word and a ", TextType.TEXT),
+                TextNode("code block", TextType.CODE),
+                TextNode(" and an ", TextType.TEXT),
+                TextNode("obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+                TextNode(" and a ", TextType.TEXT),
+                TextNode("link", TextType.LINK, "https://boot.dev"),
+            ]
+        ),
+        (
+            "",
+            []
+        )
+    ]
+
+    def test_text_to_textnodes(self):
+        for text, expected_nodes in self.text_to_textnodes_cases:
+            try:
+                result = text_to_textnodes(text)
             except ValueError as e:
                 result = repr(e)
 
