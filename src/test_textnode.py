@@ -4,9 +4,8 @@ from htmlnode import LeafNode
 from textnode import (
     TextNode,
     TextType,
-    extract_markdown_images,
-    extract_markdown_links,
     split_nodes_delimiter,
+    split_nodes_with_source,
     text_node_to_html_node,
 )
 
@@ -181,63 +180,60 @@ class TestSplitNodesDelimiter(unittest.TestCase):
 
             self.assertEqual(result, expected_nodes)
 
-class TestExtractMarkdownImages(unittest.TestCase):
-    extract_markdown_images_cases = [
+class TestSplitNodesWithSourceDelimiter(unittest.TestCase):
+    split_nodes_with_source_cases = [
         (
-            "![some image](path/to/image/source.png) that we enjoy but also [a link](https://www.google.com) just for validation. ![another image](path/to/other/image/source.png)",
-            [("some image", "path/to/image/source.png"), ("another image", "path/to/other/image/source.png")],
+            [
+                TextNode(
+                    "A [link](https://foo.bar) can be a nice place to have ![pandas](/assets/panda.png)",
+                    TextType.TEXT
+                ),
+            ],
+            [
+                TextNode(
+                    "A ",
+                    TextType.TEXT
+                ),
+                TextNode(
+                    "link",
+                    TextType.LINK,
+                    "https://foo.bar"
+                ),
+                TextNode(
+                    " can be a nice place to have ",
+                    TextType.TEXT,
+                ),
+                TextNode(
+                    "pandas",
+                    TextType.IMAGE,
+                    "/assets/panda.png"
+                ),
+            ],
         ),
         (
-            "Hello, World",
-            [],
-        ),
-        (
-            "",
-            [],
-        ),
-        (
-            None,
-            [],
+            [
+                TextNode(
+                    "Some random text with no *links* or images",
+                    TextType.TEXT
+                ),
+            ],
+            [
+                TextNode(
+                    "Some random text with no *links* or images",
+                    TextType.TEXT
+                ),
+            ],
         )
     ]
 
-    def test_extract_markdown_images(self):
-        for text, expected_matches in self.extract_markdown_images_cases:
+    def test_split_nodes_with_source(self):
+        for text_nodes, expected_nodes in self.split_nodes_with_source_cases:
             try:
-                result = extract_markdown_images(text)
+                result = split_nodes_with_source(text_nodes)
             except ValueError as e:
                 result = repr(e)
 
-            self.assertEqual(result, expected_matches)
-
-class TestExtractMarkdownLinks(unittest.TestCase):
-    extract_markdown_links_cases = [
-        (
-            "![some image](path/to/image/source.png) that we enjoy but also [a link](https://www.google.com) just for validation. [another link](https://mozilla.com)",
-            [("a link", "https://www.google.com"), ("another link", "https://mozilla.com")],
-        ),
-        (
-            "Hello, World",
-            [],
-        ),
-        (
-            "",
-            [],
-        ),
-        (
-            None,
-            [],
-        )
-    ]
-
-    def test_extract_markdown_links(self):
-        for text, expected_matches in self.extract_markdown_links_cases:
-            try:
-                result = extract_markdown_links(text)
-            except ValueError as e:
-                result = repr(e)
-
-            self.assertEqual(result, expected_matches)
+            self.assertEqual(result, expected_nodes)
 
 if __name__ == "__main__":
     unittest.main()

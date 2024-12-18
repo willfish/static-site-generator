@@ -4,6 +4,8 @@ from functools import reduce
 
 import re
 
+image_or_link_regex = re.compile(r"(!?)\[(.*?)\]\((.*?)\)")
+
 class TextType(Enum):
     NORMAL = "normal"
     BOLD = "bold"
@@ -79,26 +81,52 @@ def split_nodes_delimiter(old_nodes: list[TextNode], delimiter, text_type):
 
     return reduce(accumulate_nodes, old_nodes, [])
 
-image_or_link_regex = re.compile(r"(!?)\[(.*?)\]\((.*?)\)")
+def split_nodes_with_source(old_nodes):
+    new_nodes = []
 
+    for node in old_nodes:
+        if node.text_type == TextType.TEXT:
+            split_text_images_and_links = image_or_link_regex.split(node.text)
 
-def extract_markdown_images(text):
-    if not text:
-        return []
+            kind = "text"
+            node_parts = []
+            parts_counter = 0
 
-    matches = image_or_link_regex.findall(text)
-    filtered_matches = filter(lambda match: match[0] == '!', matches)
-    mapped_matches = map(lambda match: (match[1], match[2]), filtered_matches)
+            for split in split_text_images_and_links:
+                if parts_counter == 0:
+                    if split == '':
+                        kind = 'link'
 
-    return list(mapped_matches)
+                        parts_counter += 1
+                    elif split == '!':
+                        kind = 'image'
 
-def extract_markdown_links(text):
-    if not text:
-        return []
+                        parts_counter += 1
+                    else:
+                        kind = 'text'
 
-    matches = image_or_link_regex.findall(text)
-    filtered_matches = filter(lambda match: match[0] == '', matches)
-    mapped_matches = map(lambda match: (match[1], match[2]), filtered_matches)
+                        new_nodes.append(TextNode(split, TextType.TEXT))
+                elif parts_counter == 1:
+                    node_parts.append(split)
+                    parts_counter += 1
+                elif parts_counter == 2:
+                    parts_counter = 0
 
-    return list(mapped_matches)
+                    if kind == "image":
+                        text_type = TextType.IMAGE
+                    else:
+                        text_type = TextType.LINK
 
+                    node_parts.append(text_type)
+                    node_parts.append(split)
+
+                    new_node = TextNode(*node_parts)
+                    new_nodes.append(new_node)
+
+                    node_parts = []
+
+            return new_nodes
+        else:
+            new_nodes.append(node)
+
+    pass
