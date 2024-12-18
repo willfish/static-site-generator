@@ -133,6 +133,10 @@ def split_nodes_with_source(old_nodes):
 
     return new_nodes
 
+def markdown_to_blocks(doc) -> list[str]:
+    blocks = (doc or "").split("\n\n")
+
+    return list(map(lambda block: block.strip(), blocks))
 
 def text_to_textnodes(text):
     initial_text_node = TextNode(text, TextType.TEXT)
@@ -143,3 +147,18 @@ def text_to_textnodes(text):
     split = split_nodes_delimiter(split, "`", TextType.CODE)
 
     return split
+
+block_types = {
+    "heading": re.compile(r"(^#{1,6}) (.*)"),
+    "code": re.compile(r"```(\w+)?(.*?\n)?```", flags=re.DOTALL),
+    "quote": re.compile(r"(>.*?)(?=\n|$)"),
+    "unordered_list": re.compile(r"(-|\*) (.*)(?=\n|$)"),
+    "ordered_list": re.compile(r"(\d+|\*). (.*)(?=\n|$)"),
+    "paragraph": re.compile(r".*"),
+}
+
+def block_to_block_type(block):
+    for block_type, matcher in block_types.items():
+        matches = matcher.findall(block)
+        if matches:
+            return block_type 

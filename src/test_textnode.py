@@ -4,6 +4,8 @@ from htmlnode import LeafNode
 from textnode import (
     TextNode,
     TextType,
+    block_to_block_type,
+    markdown_to_blocks,
     split_nodes_delimiter,
     split_nodes_with_source,
     text_node_to_html_node,
@@ -302,6 +304,108 @@ class TestTextToTextNodes(unittest.TestCase):
                 result = repr(e)
 
             self.assertEqual(result, expected_nodes)
+
+class TestMarkdownToBlocks(unittest.TestCase):
+    markdown_to_blocks_cases = [
+        (
+            """
+# This is a heading
+
+This is a paragraph of text. It has some **bold** and *italic* words inside of it.
+
+  * This is the first list item in a list block
+* This is a list item
+* This is another list item    
+            """,
+            [
+                "# This is a heading",
+                "This is a paragraph of text. It has some **bold** and *italic* words inside of it.",
+                "* This is the first list item in a list block\n* This is a list item\n* This is another list item",
+            ]
+        )
+    ]
+
+    def test_split_nodes_with_source(self):
+        for doc, blocks in self.markdown_to_blocks_cases:
+            try:
+                result = markdown_to_blocks(doc)
+            except ValueError as e:
+                result = repr(e)
+
+            self.assertEqual(result, blocks)
+
+class TestBlockToBlockType(unittest.TestCase):
+    block_to_block_type_cases = [
+        ("# This is a heading", "heading"),
+        ("## This is a heading", "heading"),
+        ("### This is a heading", "heading"),
+        ("#### This is a heading", "heading"),
+        ("##### This is a heading", "heading"),
+        ("###### This is a heading", "heading"),
+        ("####### This is no longer a heading", "paragraph"),
+        ("This is a paragraph", "paragraph"),
+        (
+"""
+```ruby
+def the_better_language
+  puts "But not as widely adopted or packed with libraries"
+end
+```
+""",
+            "code"
+        ),
+        (
+"""
+```
+```
+""",
+            "code"
+        ),
+        (
+"""
+```ruby
+```
+""",
+            "code"
+        ),
+        (
+            """
+> something quoted
+> across lines
+            """,
+            "quote"
+        ),
+        (
+            """
+- a bullet
+- can be useful
+            """,
+            "unordered_list"
+        ),
+        (
+            """
+* a bullet
+* can be useful
+            """,
+            "unordered_list"
+        ),
+        (
+            """
+1. order
+1. over chaos
+            """,
+            "ordered_list"
+        )
+    ]
+
+    def test_split_nodes_with_source(self):
+        for block, expected_block_type in self.block_to_block_type_cases:
+            try:
+                result = block_to_block_type(block)
+            except ValueError as e:
+                result = repr(e)
+
+            self.assertEqual(result, expected_block_type)
 
 if __name__ == "__main__":
     unittest.main()
