@@ -1,7 +1,14 @@
 import unittest
 
 from htmlnode import LeafNode
-from textnode import TextNode, TextType, text_node_to_html_node, split_nodes_delimiter
+from textnode import (
+    TextNode,
+    TextType,
+    extract_markdown_images,
+    extract_markdown_links,
+    split_nodes_delimiter,
+    text_node_to_html_node,
+)
 
 class TestTextNode(unittest.TestCase):
     equal_cases = [
@@ -109,7 +116,7 @@ class TestTextNodeToHtmlNode(unittest.TestCase):
                 expected_leaf_node
             )
 
-class TestTextNodeToHtmlNode(unittest.TestCase):
+class TestSplitNodesDelimiter(unittest.TestCase):
     split_nodes_delimiter_cases = [
         # No tokens to split
         (
@@ -173,6 +180,64 @@ class TestTextNodeToHtmlNode(unittest.TestCase):
                 result = repr(e)
 
             self.assertEqual(result, expected_nodes)
+
+class TestExtractMarkdownImages(unittest.TestCase):
+    extract_markdown_images_cases = [
+        (
+            "![some image](path/to/image/source.png) that we enjoy but also [a link](https://www.google.com) just for validation. ![another image](path/to/other/image/source.png)",
+            [("some image", "path/to/image/source.png"), ("another image", "path/to/other/image/source.png")],
+        ),
+        (
+            "Hello, World",
+            [],
+        ),
+        (
+            "",
+            [],
+        ),
+        (
+            None,
+            [],
+        )
+    ]
+
+    def test_extract_markdown_images(self):
+        for text, expected_matches in self.extract_markdown_images_cases:
+            try:
+                result = extract_markdown_images(text)
+            except ValueError as e:
+                result = repr(e)
+
+            self.assertEqual(result, expected_matches)
+
+class TestExtractMarkdownLinks(unittest.TestCase):
+    extract_markdown_links_cases = [
+        (
+            "![some image](path/to/image/source.png) that we enjoy but also [a link](https://www.google.com) just for validation. [another link](https://mozilla.com)",
+            [("a link", "https://www.google.com"), ("another link", "https://mozilla.com")],
+        ),
+        (
+            "Hello, World",
+            [],
+        ),
+        (
+            "",
+            [],
+        ),
+        (
+            None,
+            [],
+        )
+    ]
+
+    def test_extract_markdown_links(self):
+        for text, expected_matches in self.extract_markdown_links_cases:
+            try:
+                result = extract_markdown_links(text)
+            except ValueError as e:
+                result = repr(e)
+
+            self.assertEqual(result, expected_matches)
 
 if __name__ == "__main__":
     unittest.main()

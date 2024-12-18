@@ -2,6 +2,8 @@ from enum import Enum
 from htmlnode import LeafNode
 from functools import reduce
 
+import re
+
 class TextType(Enum):
     NORMAL = "normal"
     BOLD = "bold"
@@ -76,3 +78,27 @@ def split_nodes_delimiter(old_nodes: list[TextNode], delimiter, text_type):
         return acc
 
     return reduce(accumulate_nodes, old_nodes, [])
+
+image_or_link_regex = re.compile(r"(!?)\[(.*?)\]\((.*?)\)")
+
+
+def extract_markdown_images(text):
+    if not text:
+        return []
+
+    matches = image_or_link_regex.findall(text)
+    filtered_matches = filter(lambda match: match[0] == '!', matches)
+    mapped_matches = map(lambda match: (match[1], match[2]), filtered_matches)
+
+    return list(mapped_matches)
+
+def extract_markdown_links(text):
+    if not text:
+        return []
+
+    matches = image_or_link_regex.findall(text)
+    filtered_matches = filter(lambda match: match[0] == '', matches)
+    mapped_matches = map(lambda match: (match[1], match[2]), filtered_matches)
+
+    return list(mapped_matches)
+
