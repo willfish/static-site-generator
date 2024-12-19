@@ -1,5 +1,5 @@
 from enum import Enum
-from htmlnode import LeafNode
+from htmlnode import LeafNode, ParentNode
 from functools import reduce
 
 import re
@@ -39,7 +39,7 @@ class TextNode():
 
 def text_node_to_html_node(text_node):
     match text_node.text_type:
-        case TextType.NORMAL:
+        case TextType.TEXT:
             return LeafNode(None, text_node.text)
         case TextType.BOLD:
             return LeafNode("b", text_node.text)
@@ -133,11 +133,6 @@ def split_nodes_with_source(old_nodes):
 
     return new_nodes
 
-def markdown_to_blocks(doc) -> list[str]:
-    blocks = (doc or "").split("\n\n")
-
-    return list(map(lambda block: block.strip(), blocks))
-
 def text_to_textnodes(text):
     initial_text_node = TextNode(text, TextType.TEXT)
 
@@ -151,9 +146,9 @@ def text_to_textnodes(text):
 block_types = {
     "heading": re.compile(r"(^#{1,6}) (.*)"),
     "code": re.compile(r"```(\w+)?(.*?\n)?```", flags=re.DOTALL),
-    "quote": re.compile(r"(>.*?)(?=\n|$)"),
-    "unordered_list": re.compile(r"(-|\*) (.*)(?=\n|$)"),
-    "ordered_list": re.compile(r"(\d+|\*). (.*)(?=\n|$)"),
+    "quote": re.compile(r"^(>)(.*?)(?=\n|$)", flags=re.MULTILINE),
+    "unordered_list": re.compile(r"^(-|\*) (.*)(?=\n|$)", flags=re.MULTILINE),
+    "ordered_list": re.compile(r"^(\d+|\*). (.*)(?=\n|$)", flags=re.MULTILINE),
     "paragraph": re.compile(r".*"),
 }
 
@@ -161,4 +156,66 @@ def block_to_block_type(block):
     for block_type, matcher in block_types.items():
         matches = matcher.findall(block)
         if matches:
-            return block_type 
+            return block_type
+
+def markdown_to_blocks(doc) -> list[str]:
+    blocks = (doc or "").split("\n\n")
+
+    return list(map(lambda block: block.strip(), blocks))
+
+def block_to_html_node(block: str):
+    blocktype = block_to_block_type(block)
+    matcher = block_types[blocktype]
+    matches = matcher.findall(block)
+
+    tag = ""
+    children = []
+    props = {}
+
+    match blocktype:
+        case "heading":
+            heading_level, heading_text = matches[0]
+            tag = f"h{len(heading_level)}"
+            text_nodes = text_to_textnodes(heading_text)
+            children = list(map(text_node_to_html_node, text_nodes))
+        case "code":
+            language, content = matches[0]
+            tag = "pre"
+
+            if language:
+                props = {"class": f"highlight-source-{language}"}
+
+            children = [LeafNode("code", content)]
+        case "quote":
+            tag = "blockquote"
+            content = block.replace(">", "").strip()
+            text_nodes = text_to_textnodes(content)
+            children = list(map(text_node_to_html_node, text_nodes))
+        case "unordered_list":
+            tag = "ul"
+            list_items_content = map(lambda match: match[1], matches)
+            children = list(map(list_content_to_html_list_item, list_items_content))
+        case "ordered_list":
+            tag = "ol"
+            list_items_content = map(lambda match: match[1], matches)
+            children = list(map(list_content_to_html_list_item, list_items_content))
+        case "paragraph":
+            tag = "p"
+            text_nodes = text_to_textnodes(block)
+            children = list(map(text_node_to_html_node, text_nodes))
+
+    return ParentNode(tag, children, props)
+
+def list_content_to_html_list_item(content):
+    text_nodes = text_to_textnodes(content)
+    children = list(map(text_node_to_html_node, text_nodes))
+
+    return ParentNode("li", children)
+
+def markdown_to_html_node(doc):
+    blocks = markdown_to_blocks(doc)
+    children = list(map(block_to_html_node, blocks))
+    body_parent = ParentNode("body", children)
+    html_parent = ParentNode("html", [body_parent])
+
+    return html_parent

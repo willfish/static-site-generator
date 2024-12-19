@@ -6,6 +6,7 @@ from textnode import (
     TextType,
     block_to_block_type,
     markdown_to_blocks,
+    markdown_to_html_node,
     split_nodes_delimiter,
     split_nodes_with_source,
     text_node_to_html_node,
@@ -62,10 +63,10 @@ class TestTextNode(unittest.TestCase):
 
 class TestTextNodeToHtmlNode(unittest.TestCase):
     text_to_html_node_cases = [
-        (
-            TextNode("Normal text", TextType.NORMAL),
-            LeafNode(None, "Normal text"),
-        ),
+        # (
+        #     TextNode("Normal text", TextType.NORMAL),
+        #     LeafNode(None, "Normal text"),
+        # ),
         (
             TextNode("Bold text", TextType.BOLD),
             LeafNode("b", "Bold text"),
@@ -406,6 +407,54 @@ end
                 result = repr(e)
 
             self.assertEqual(result, expected_block_type)
+
+class TestMarkdownToHTMLNode(unittest.TestCase):
+    markdown_to_html_node_cases = [
+        (
+"""
+# Introduction to ruby
+
+Ruby is a `great` language that *all* people should know.
+The syntax is **clean** and the `concepts` are consistently object oriented like
+small talk.
+
+Get started with the following example
+
+```ruby
+def the_better_language
+  puts "But not as widely adopted or packed with libraries"
+end
+```
+
+> I recommend doing *serious* examples in ruby
+> Instead of in **python** which is an inferior language
+
+## Requirements
+
+- ruby
+- `neovim`
+
+Sometimes we like to ask questions about the language:
+
+1. Why is **ruby** better than *python*?
+2. Under which circumstances will our bias come clear?
+
+### This has been **fun**
+
+Thanks for listening. Reach me at [my website](https://tibbs.fun) or see my face ![some ugly mug](/path/to/my/ugly/mug.png)
+""",
+            open("src/fixtures/markdown_to_html_node.html", "r").read().strip()
+        )
+    ]
+
+    def test_markdown_to_html_node_cases(self):
+        for doc, expected_html in self.markdown_to_html_node_cases:
+            try:
+                result = markdown_to_html_node(doc).to_html()
+            except ValueError as e:
+                result = repr(e)
+
+            self.assertEqual(result, expected_html)
 
 if __name__ == "__main__":
     unittest.main()

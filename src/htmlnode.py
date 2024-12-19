@@ -37,7 +37,7 @@ class LeafNode(HTMLNode):
         super().__init__(tag, value, [], props)
 
     def to_html(self) -> str:
-        if self.value:
+        if self.value or self.value == '':
             if self.tag:
                 return f"{self.start_tag_html()}{self.value}{self.end_tag_html()}"
             else:
