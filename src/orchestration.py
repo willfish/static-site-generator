@@ -5,7 +5,7 @@ from functools import reduce
 import re
 
 image_or_link_regex = re.compile(r"(!?)\[(.*?)\]\((.*?)\)")
-block_types = {
+block_type_regexes = {
     "heading": re.compile(r"(^#{1,6}) (.*)"),
     "code": re.compile(r"```(\w+)?(.*?\n)?```", flags=re.DOTALL),
     "quote": re.compile(r"^(>)(.*?)(?=\n|$)", flags=re.MULTILINE),
@@ -15,7 +15,14 @@ block_types = {
 }
 
 def extract_title(doc):
-    pass
+    title_parts = re.findall(r"(^# )(.*)", doc, re.MULTILINE)
+
+    if title_parts:
+        _, title = title_parts[0]
+    else:
+        raise ValueError("Missing title from markdown document")
+
+    return title
 
 def text_node_to_html_node(text_node):
     match text_node.text_type:
@@ -124,7 +131,7 @@ def text_to_textnodes(text):
     return split
 
 def block_to_block_type(block):
-    for block_type, matcher in block_types.items():
+    for block_type, matcher in block_type_regexes.items():
         matches = matcher.findall(block)
         if matches:
             return block_type
@@ -136,7 +143,7 @@ def markdown_to_blocks(doc) -> list[str]:
 
 def block_to_html_node(block: str):
     blocktype = block_to_block_type(block)
-    matcher = block_types[blocktype]
+    matcher = block_type_regexes[blocktype]
     matches = matcher.findall(block)
 
     tag = ""
@@ -186,7 +193,6 @@ def list_content_to_html_list_item(content):
 def markdown_to_html_node(doc):
     blocks = markdown_to_blocks(doc)
     children = list(map(block_to_html_node, blocks))
-    body_parent = ParentNode("body", children)
-    html_parent = ParentNode("html", [body_parent])
+    content = ParentNode("div", children)
 
-    return html_parent
+    return content

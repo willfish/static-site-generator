@@ -4,6 +4,7 @@ from htmlnode import LeafNode
 from textnode import TextNode, TextType
 from orchestration import (
     block_to_block_type,
+    extract_title,
     markdown_to_blocks,
     markdown_to_html_node,
     split_nodes_delimiter,
@@ -12,12 +13,41 @@ from orchestration import (
     text_to_textnodes,
 )
 
-class TestTextNodeToHtmlNode(unittest.TestCase):
+class TestOrchestration(unittest.TestCase):
+    extract_title_cases = [
+        (
+            """
+            # Some title
+
+            Embedded in a document somehow
+            """,
+            "Some title"
+        ),
+        (
+            """
+            Some text without a title # Some time
+
+            Hmm what shall we do
+            """,
+            "ValueError('Missing title from markdown document')"
+        )
+    ]
+
+    def test_extract_title(self):
+        for doc, expected in self.extract_title_cases:
+            doc = doc.strip()
+            try:
+                result = extract_title(doc)
+            except ValueError as e:
+                result = repr(e)
+
+            self.assertEqual(result, expected)
+
     text_to_html_node_cases = [
-        # (
-        #     TextNode("Normal text", TextType.NORMAL),
-        #     LeafNode(None, "Normal text"),
-        # ),
+        (
+            TextNode("Normal text", TextType.TEXT),
+            LeafNode(None, "Normal text"),
+        ),
         (
             TextNode("Bold text", TextType.BOLD),
             LeafNode("b", "Bold text"),
@@ -57,7 +87,6 @@ class TestTextNodeToHtmlNode(unittest.TestCase):
                 expected_leaf_node
             )
 
-class TestSplitNodesDelimiter(unittest.TestCase):
     split_nodes_delimiter_cases = [
         # No tokens to split
         (
@@ -140,7 +169,6 @@ class TestSplitNodesDelimiter(unittest.TestCase):
 
             self.assertEqual(result, expected_nodes)
 
-class TestSplitNodesWithSource(unittest.TestCase):
     split_nodes_with_source_cases = [
         (
             [
@@ -225,7 +253,6 @@ class TestSplitNodesWithSource(unittest.TestCase):
 
             self.assertEqual(result, expected_nodes)
 
-class TestTextToTextNodes(unittest.TestCase):
     text_to_textnodes_cases = [
         (
             "This is **text** with an *italic* word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)",
@@ -257,7 +284,6 @@ class TestTextToTextNodes(unittest.TestCase):
 
             self.assertEqual(result, expected_nodes)
 
-class TestMarkdownToBlocks(unittest.TestCase):
     markdown_to_blocks_cases = [
         (
             """
@@ -286,7 +312,6 @@ This is a paragraph of text. It has some **bold** and *italic* words inside of i
 
             self.assertEqual(result, blocks)
 
-class TestBlockToBlockType(unittest.TestCase):
     block_to_block_type_cases = [
         ("# This is a heading", "heading"),
         ("## This is a heading", "heading"),
@@ -359,7 +384,6 @@ end
 
             self.assertEqual(result, expected_block_type)
 
-class TestMarkdownToHTMLNode(unittest.TestCase):
     markdown_to_html_node_cases = [
         (
 """
@@ -406,6 +430,8 @@ Thanks for listening. Reach me at [my website](https://tibbs.fun) or see my face
                 result = repr(e)
 
             self.assertEqual(result, expected_html)
+
+
 
 if __name__ == "__main__":
     unittest.main()
